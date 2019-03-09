@@ -13,17 +13,38 @@
   //   - quizzes : fetchで取得したクイズデータの配列(resutls)を保持する
   //   - currentIndex : 現在何問目のクイズに取り組んでいるのかをインデックス番号で保持する
   //   - numberOfCorrects : 正答数を保持するう
-
+  const gameState = {
+    quizzes : [],
+    currentIndex : 0,
+    numberOfCorrects : 0,
+  }
 
   // HTMLのid値がセットされているDOMを取得する
-
+  const container = document.getElementById('container');
+  const questionIndex = document.getElementById('question');
+  const answersList = document.getElementById('answers');
+  const result = document.getElementById('result');
+  const restartButton = document.getElementById('restart-button');
 
   // ページの読み込みが完了したらクイズ情報を取得する
-
+  window.onload = function(){
+    fetchQuizData();
+  }
 
   // 「Restart」ボタンをクリックしたら再度クイズデータを取得する
+  restartButton.addEventListener('click', event => {
+    resetGameState();
+    fetchQuizData();
+  })
 
 
+  // gamaState内の配列のlengthを全てリセットする
+
+  resetGameState = () => {
+    gameState.quizzes.length = 0;
+    gameState.currentIndex　= 0
+    gameState.numberOfCorrects = 0;
+  }
 
   // `fetchQuizData関数`を実装する
   // - 実現したいこと
@@ -42,7 +63,18 @@
   //   - 無し
   // - 戻り値
   //   - 無し
+  const fetchQuizData = () => {
+    questionIndex.textContent = 'Now loading...';
+    result.value = '';
+    restartButton.style.display = 'none'; // リスタートボタンの非表示
 
+    fetch(API_URL)
+      .then(response => response.json())
+      .then((data) => {
+        gameState.quizzes.push(data.results);
+        makeQuiz(gameState);
+      });
+  }
 
   // setNextQuiz関数を実装する
   // - 実現したいこと
@@ -57,6 +89,17 @@
   // - 戻り値
   //   - 無し
 
+  setNextQuiz = () => {
+    questionIndex.innerText = "";
+    removeAllAnswers();
+
+    if(gameState.currentIndex === 10){ // 問題数が全10問なので、回答するたびに数字が足されるcurrentIndexで計算する。
+      finishQuiz();
+    } else {
+      makeQuiz();
+    }
+  }
+
 
   // finishQuiz関数を実装する
   // - 実現したいこと
@@ -66,7 +109,10 @@
   //   - 無し
   // - 戻り値
   //   - 無し
-
+  finishQuiz = () => {
+    questionIndex.innerText = ` ${gameState.numberOfCorrects}/${gameState.currentIndex} corrects.`
+    restartButton.style.display = "block"; // リスタートボタンの表示
+  }
 
   // removeAllAnswers関数を実装する
   // - 実現したいこと
@@ -75,7 +121,11 @@
   //   - 無し
   // - 戻り値
   //   - 無し
-
+  const removeAllAnswers = () => {
+    while(answersList.firstChild){
+      answersList.removeChild(answersList.firstChild);
+    }
+  }
 
   // makeQuiz関数を実装する
   // - 実現したいこと
@@ -92,11 +142,51 @@
   //   - 無し
   // - 戻り値無し
   //   - 無し
+  const makeQuiz = () => {
+    gameState.quizzes.forEach((currentQuestion, currentNumber) => {
 
+      // 問題文、回答中のエスケープ文字を修正
+      questionIndex.textContent = unescapeHTML(currentQuestion[currentNumber].question);
+      const correctAnswer = unescapeHTML(currentQuestion[currentNumber].correct_answer); // 回答の成否確認用
+
+      const changeQuestionTextArray = change(currentQuestion[currentNumber]); // 回答文の結合、シャッフル
+
+      // 解答をHTML上に表示、解答をクリックした際の挙動を設定
+      changeQuestionTextArray.forEach(questionText => {
+
+        const unEscapedQuestionText = unescapeHTML(questionText);
+
+
+        // 解答をHTML上に表示
+        const answerBox = document.createElement('li');
+        answerBox.textContent = unEscapedQuestionText;
+        answersList.appendChild(answerBox);
+
+        // 解答を押した際の挙動
+        answerBox.addEventListener('click', event => {
+          if(unEscapedQuestionText === correctAnswer){ // 正解の場合
+            alert('Correct answer!!');
+            gameState.numberOfCorrects++; // 正解数を表示するため配列に要素を追加
+          } else { // 不正解の場合
+            alert(`Wrong answer... (The correct answer is ${correctAnswer})`);
+          }
+
+          gameState.currentIndex++; // 回答数を表示するため配列に要素を追加
+          currentQuestion.splice(currentNumber, 1); // 次の問題に移行するため現在の問題を配列から削除する
+
+          setNextQuiz();
+        });
+      });
+    });
+  }
 
   // quizオブジェクトの中にあるcorrect_answer, incorrect_answersを結合して
   // 正解・不正解の解答をシャッフルする。
-
+  const change = currentQuestion => {
+    const changedArray = currentQuestion.incorrect_answers.concat(currentQuestion.correct_answer); // 解答を結合
+    const shffledArray = shuffle(changedArray); // シャッフル
+    return shffledArray;
+  }
 
   // `shuffle関数` を実装する
   // - 実現したいこと
@@ -108,7 +198,18 @@
   //   - array : 配列
   // - 戻り値
   //   - shffuledArray : シャッフル後の配列(引数の配列とは別の配列であることに注意する)
+  const shuffle = array => {
 
+    let shffledArray = array.slice(); // 参照が上書きされないように別の配列を作成する
+
+    // 解答をシャッフルする
+    for (let i = shffledArray.length - 1; i >= 0; i--){
+      let rand = Math.floor( Math.random() * ( i + 1 ) );
+      [shffledArray[i], shffledArray[rand]] = [shffledArray[rand], shffledArray[i]]
+    }
+    return shffledArray;
+
+  }
 
 
   // unescapeHTML関数を実装する
@@ -120,5 +221,16 @@
   //   - 文字列
   // - 戻り値
   //   - 文字列
+  const unescapeHTML = str => {
+    let div = document.createElement("div");
+    div.innerHTML = str.replace(/</g,"&lt;")
+                       .replace(/>/g,"&gt;")
+                       .replace(/&/g, "&amp;")
+                       .replace(/\’/g, "&#039;")
+                       .replace(/ /g, "&nbsp;")
+                       .replace(/\r/g, "&#13;")
+                       .replace(/\n/g, "&#10;");
+    return div.textContent || div.innerText;
+  }
 
 })();

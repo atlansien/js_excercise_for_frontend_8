@@ -88,7 +88,7 @@
   // - 戻り値
   //   - 無し
 
-  setNextQuiz = () => {
+  const setNextQuiz = () => {
     questionIndex.innerText = "";
     removeAllAnswers();
 
@@ -108,7 +108,7 @@
   //   - 無し
   // - 戻り値
   //   - 無し
-  finishQuiz = () => {
+  const finishQuiz = () => {
     questionIndex.innerText = `${gameState.numberOfCorrects}/${gameState.currentIndex} corrects.`;
     restartButton.style.display = "block"; // リスタートボタンの表示
   };
@@ -146,20 +146,20 @@
     questionIndex.textContent = unescapeHTML(currentQuestion.question);
     const correctAnswer = unescapeHTML(currentQuestion.correct_answer); // 回答の成否確認用
 
-    const answers = changedArray(currentQuestion); // 回答文の結合、シャッフル
+    const answers = shuffledAnswers(currentQuestion); // 回答文の結合、シャッフル
 
     // 解答をHTML上に表示、解答をクリックした際の挙動を設定
-    answers.forEach(questionText => {
-      const unEscapedQuestionText = unescapeHTML(questionText);
+    answers.forEach(answer => {
+      const unEscapedAnswerText = unescapeHTML(answer);
 
       // 解答をHTML上に表示
       const answerBox = document.createElement("li");
-      answerBox.textContent = unEscapedQuestionText;
+      answerBox.textContent = unEscapedAnswerText;
       answersList.appendChild(answerBox);
 
       // 解答を押した際の挙動
       answerBox.addEventListener("click", event => {
-        if (unEscapedQuestionText === correctAnswer) { // 正解の場合
+        if (unEscapedAnswerText === correctAnswer) { // 正解の場合
           alert("Correct answer!!");
           gameState.numberOfCorrects++; // 正解数を表示するため配列に要素を追加
         } else { // 不正解の場合
@@ -175,10 +175,10 @@
 
   // quizオブジェクトの中にあるcorrect_answer, incorrect_answersを結合して
   // 正解・不正解の解答をシャッフルする。
-  const changedArray = currentQuestion => {
+  const shuffledAnswers = currentQuestion => {
     const combinedArray = currentQuestion.incorrect_answers.concat(currentQuestion.correct_answer); // 解答を結合
-    const changedArray = shuffle(combinedArray); // シャッフル
-    return changedArray;
+    const shuffledArray = shuffle(combinedArray); // シャッフル
+    return shuffledArray;
   };
 
   // `shuffle関数` を実装する
@@ -192,15 +192,12 @@
   // - 戻り値
   //   - shffuledArray : シャッフル後の配列(引数の配列とは別の配列であることに注意する)
   const shuffle = array => {
-    let shffledArray = array.slice(); // 参照が上書きされないように別の配列を作成する
+    const shffledArray = array.slice(); // 参照が上書きされないように別の配列を作成する
 
     // 解答をシャッフルする
     for (let i = shffledArray.length - 1; i >= 0; i--) {
-      let rand = Math.floor(Math.random() * (i + 1));
-      [shffledArray[i], shffledArray[rand]] = [
-        shffledArray[rand],
-        shffledArray[i]
-      ];
+      const rand = Math.floor(Math.random() * (i + 1));
+      [shffledArray[i], shffledArray[rand]] = [shffledArray[rand], shffledArray[i]];
     }
     return shffledArray;
   };
@@ -215,11 +212,12 @@
   // - 戻り値
   //   - 文字列
   const unescapeHTML = str => {
-    let div = document.createElement("div");
+    const div = document.createElement("div");
     div.innerHTML = str
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/&/g, "&amp;")
+      .replace(/'/g, "&#039;")
       .replace(/ /g, "&nbsp;")
       .replace(/\r/g, "&#13;")
       .replace(/\n/g, "&#10;");
